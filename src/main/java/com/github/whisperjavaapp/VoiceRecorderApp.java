@@ -1,7 +1,6 @@
 package com.github.whisperjavaapp;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
@@ -50,7 +49,7 @@ public class VoiceRecorderApp extends JFrame {
 
 	public VoiceRecorderApp() {
 		initUI();
-		setTitle("Голосовой ввод для RunaWFE");
+		setTitle("Голосовой ввод Whisper");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		pack();
 		setLocationRelativeTo(null);
@@ -61,9 +60,8 @@ public class VoiceRecorderApp extends JFrame {
 		setLayout(new BorderLayout(10, 10));
 
 		JPanel buttonPanel = new JPanel();
-		buttonPanel.setBackground(Color.RED);
 
-		buttonPanel.setPreferredSize(new Dimension(200, 80));
+		buttonPanel.setPreferredSize(new Dimension(200, 40));
 
 		recordButton = new JButton("Начать запись (10 сек)");
 		recordButton.setFont(new Font("Arial", Font.BOLD, 14));
