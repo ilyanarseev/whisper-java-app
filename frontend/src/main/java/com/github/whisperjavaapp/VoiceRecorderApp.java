@@ -4,12 +4,17 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.ConnectException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -28,10 +33,6 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
-
-import io.github.givimad.whisperjni.WhisperContext;
-import io.github.givimad.whisperjni.WhisperFullParams;
-import io.github.givimad.whisperjni.WhisperJNI;
 
 public class VoiceRecorderApp extends JFrame {
 	private JButton recordButton;
@@ -206,54 +207,36 @@ public class VoiceRecorderApp extends JFrame {
 
 	private String transcribeWithWhisper(File audioFile) {
 		try {
-			WhisperJNI.loadLibrary();
-			WhisperJNI.setLibraryLogger(null);
-			WhisperJNI whisper = new WhisperJNI();
+			byte[] audioData = Files.readAllBytes(audioFile.toPath());
 
-			float[] samples = readWavFileAsFloat(audioFile);
+			URL url = new URL("http://localhost:9876/transcribe");
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestMethod("POST");
+			conn.setDoOutput(true);
 
-			Path modelPath = Path.of("models", "ggml-tiny.bin");
-			WhisperContext ctx = whisper.init(modelPath);
-
-			WhisperFullParams params = new WhisperFullParams();
-
-			params.language = "auto";
-
-			int result = whisper.full(ctx, params, samples, samples.length);
-
-			if (result != 0) {
-				ctx.close();
-				return "Ошибка транскрибации: код " + result;
+			try (OutputStream os = conn.getOutputStream()) {
+				os.write(audioData);
 			}
 
-			int numSegments = whisper.fullNSegments(ctx);
-			StringBuilder fullText = new StringBuilder();
-
-			for (int i = 0; i < numSegments; i++) {
-				String segmentText = whisper.fullGetSegmentText(ctx, i);
-				fullText.append(segmentText).append(" ");
+			int responseCode = conn.getResponseCode();
+			if (responseCode == 200) {
+				try (BufferedReader br = new BufferedReader(
+						new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+					return br.readLine();
+				}
+			} else {
+				try (BufferedReader br = new BufferedReader(
+						new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
+					return "Ошибка сервера: " + br.readLine();
+				}
 			}
 
-			ctx.close();
-			return fullText.toString().trim();
-
+		} catch (ConnectException e) {
+			return "Ошибка: Whisper-сервер не запущен. Запустите сначала backend в Docker.";
 		} catch (Exception e) {
 			e.printStackTrace();
-			return "Ошибка распознавания: " + e.getMessage();
+			return "Ошибка связи с сервером: " + e.getMessage();
 		}
-	}
-
-	private float[] readWavFileAsFloat(File wavFile) throws Exception {
-		AudioInputStream audioStream = AudioSystem.getAudioInputStream(wavFile);
-		byte[] bytes = audioStream.readAllBytes();
-
-		float[] samples = new float[bytes.length / 2];
-		for (int i = 0; i < samples.length; i++) {
-			short s = (short) ((bytes[i * 2 + 1] << 8) | (bytes[i * 2] & 0xFF));
-			samples[i] = s / 32768.0f;
-		}
-
-		return samples;
 	}
 
 	@Override

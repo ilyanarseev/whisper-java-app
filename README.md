@@ -8,8 +8,14 @@
 - Использование OpenSource библиотеки Whisper-java для транскрибации
 - Графический интерфейс на Swing
 
+## Архитектура
+Приложение разделено на две независимые части:
+- **Бэкенд (whisper-backend)** — HTTP-сервер на порту 9876, который принимает аудиоданные и возвращает распознанный текст. Работает в Docker для изоляции всех зависимостей.
+- **Фронтенд (whisper-frontend)** — Swing GUI, который записывает звук с микрофона, отправляет на бэкенд и отображает результат.
+
 ## Требования
-- Java 11 или новее
+- Java 11 или новее (для фронтенда)
+- Docker (для бэкенда)
 - Apache Maven 3.6.3
 - Микрофон
 - Модель Whisper (в исходном коде используется ggml-tiny.bin)
@@ -25,8 +31,20 @@ cd whisper-java-app
 # Сборка проекта
 mvn clean package
 
-# Запуск проекта
-java -jar target/whisper-java-app-1.0.0-jar-with-dependencies.jar
+# Запуск бэкенда
+
+# Linux/MacOS
+./run-backend-docker.sh
+
+# Windows
+.\run-backend-docker.ps1
+
+# Можно напрямую через Docker
+docker build -t whisper-backend .
+docker run --rm -p 9876:9876 -v $(pwd)/models:/app/models whisper-backend
+
+# Запуск фронтенда
+java -jar backend/target/whisper-backend-1.0.0-jar-with-dependencies.jar
 ```
 
 ## Работа с программой
