@@ -172,7 +172,7 @@ public class WhisperServer {
 			}
 
 			WhisperFullParams params = new WhisperFullParams();
-			// params.language = "ru";
+			params.language = "auto";
 
 			int result = whisper.full(ctx, params, samples, samples.length);
 			if (result != 0) {
